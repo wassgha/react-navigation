@@ -94,68 +94,14 @@ function forVertical(props) {
   });
   const translateX = 0;
 
-  return {
-    opacity,
-    transform: [{ translateX }, { translateY }],
-  };
-}
-
-/**
- * Standard Android-style fade in from the bottom.
- */
-function forFadeFromBottomAndroid(props) {
-  const { layout, position, scene } = props;
-
-  if (!layout.isMeasured) {
-    return forInitial(props);
-  }
-  const interpolate = getSceneIndicesForInterpolationInputRange(props);
-
-  if (!interpolate) return { opacity: 0 };
-
-  const { first, last } = interpolate;
-  const index = scene.index;
-  const inputRange = [first, index, last - 0.01, last];
-
-  const opacity = position.interpolate({
-    inputRange,
-    outputRange: [0, 1, 1, 0],
-  });
-
-  const translateY = position.interpolate({
-    inputRange,
-    outputRange: [50, 0, 0, 0],
-  });
-  const translateX = 0;
-
-  return {
-    opacity,
-    transform: [{ translateX }, { translateY }],
-  };
-}
-
-/**
- *  fadeIn and fadeOut
- */
-function forFade(props) {
-  const { layout, position, scene } = props;
-
-  if (!layout.isMeasured) {
-    return forInitial(props);
-  }
-  const interpolate = getSceneIndicesForInterpolationInputRange(props);
-
-  if (!interpolate) return { opacity: 0 };
-
-  const { first, last } = interpolate;
-  const index = scene.index;
-  const opacity = position.interpolate({
+  const scale = position.interpolate({
     inputRange: [first, index, last],
-    outputRange: [0, 1, 1],
+    outputRange: [0.2, 1, 1],
   });
 
   return {
     opacity,
+    transform: [{ translateX }, { translateY }, { scale }]
   };
 }
 
@@ -169,7 +115,5 @@ function canUseNativeDriver() {
 export default {
   forHorizontal,
   forVertical,
-  forFadeFromBottomAndroid,
-  forFade,
   canUseNativeDriver,
 };
