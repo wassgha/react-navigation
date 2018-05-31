@@ -78,6 +78,13 @@ describe('SwitchRouter', () => {
     expect(state3.index).toEqual(0);
   });
 
+  test('paths option on SwitchRouter overrides path from route config', () => {
+    const router = getExampleRouter({ paths: { A: 'overridden' } });
+    const action = router.getActionForPathAndParams('overridden', {});
+    expect(action.type).toEqual(NavigationActions.NAVIGATE);
+    expect(action.routeName).toEqual('A');
+  });
+
   test('provides correct action for getActionForPathAndParams', () => {
     const router = getExampleRouter({ backBehavior: 'initialRoute' });
     const action = router.getActionForPathAndParams('A1', { foo: 'bar' });
@@ -119,6 +126,93 @@ describe('SwitchRouter', () => {
         params: { foo: 'baz' },
       },
     });
+  });
+
+  test('order of handling navigate action is correct for nested switchrouters', () => {
+    // router = switch({ Nested: switch({ Foo, Bar }), Other: switch({ Foo }), Bar })
+    // if we are focused on Other and navigate to Bar, what should happen?
+
+    const Screen = () => <div />;
+    const NestedSwitch = () => <div />;
+    const OtherNestedSwitch = () => <div />;
+
+    let nestedRouter = SwitchRouter({ Foo: Screen, Bar: Screen });
+    let otherNestedRouter = SwitchRouter({ Foo: Screen });
+    NestedSwitch.router = nestedRouter;
+    OtherNestedSwitch.router = otherNestedRouter;
+
+    let router = SwitchRouter(
+      {
+        NestedSwitch,
+        OtherNestedSwitch,
+        Bar: Screen,
+      },
+      {
+        initialRouteName: 'OtherNestedSwitch',
+      }
+    );
+
+    const state = router.getStateForAction({ type: NavigationActions.INIT });
+    expect(state.routes[state.index].routeName).toEqual('OtherNestedSwitch');
+
+    const state2 = router.getStateForAction(
+      {
+        type: NavigationActions.NAVIGATE,
+        routeName: 'Bar',
+      },
+      state
+    );
+    expect(state2.routes[state2.index].routeName).toEqual('Bar');
+
+    const state3 = router.getStateForAction(
+      {
+        type: NavigationActions.NAVIGATE,
+        routeName: 'NestedSwitch',
+      },
+      state2
+    );
+    const state4 = router.getStateForAction(
+      {
+        type: NavigationActions.NAVIGATE,
+        routeName: 'Bar',
+      },
+      state3
+    );
+    let activeState4 = state4.routes[state4.index];
+    expect(activeState4.routeName).toEqual('NestedSwitch');
+    expect(activeState4.routes[activeState4.index].routeName).toEqual('Bar');
+  });
+
+  // https://github.com/react-navigation/react-navigation.github.io/issues/117#issuecomment-385597628
+  test('order of handling navigate action is correct for nested stackrouters', () => {
+    const Screen = () => <div />;
+    const MainStack = () => <div />;
+    const LoginStack = () => <div />;
+    MainStack.router = StackRouter({ Home: Screen, Profile: Screen });
+    LoginStack.router = StackRouter({ Form: Screen, ForgotPassword: Screen });
+
+    let router = SwitchRouter(
+      {
+        Home: Screen,
+        Login: LoginStack,
+        Main: MainStack,
+      },
+      {
+        initialRouteName: 'Login',
+      }
+    );
+
+    const state = router.getStateForAction({ type: NavigationActions.INIT });
+    expect(state.routes[state.index].routeName).toEqual('Login');
+
+    const state2 = router.getStateForAction(
+      {
+        type: NavigationActions.NAVIGATE,
+        routeName: 'Home',
+      },
+      state
+    );
+    expect(state2.routes[state2.index].routeName).toEqual('Home');
   });
 });
 
